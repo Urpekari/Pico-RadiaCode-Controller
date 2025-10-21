@@ -81,8 +81,8 @@ class RadiaCode:
         """
         self._seq = 0
 
-        # Bluepy doesn't support MacOS: https://github.com/IanHarvey/bluepy/issues/44
-        self._bt_supported = platform.system() != 'Darwin'
+        # using pico 1/2 W so always supports 
+        self._bt_supported = True # platform.system() != 'Darwin'
 
         if bluetooth_mac is not None and self._bt_supported is True:
             self._connection = Bluetooth(bluetooth_mac)
