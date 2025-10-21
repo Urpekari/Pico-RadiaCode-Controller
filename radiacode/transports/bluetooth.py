@@ -29,7 +29,7 @@ class Bluetooth:
         # new shared variables
         self.ble: bluetooth.BLE = bluetooth.BLE()
         # set up callbacks (notifications)
-        self.ble.irq(self.handleNotifications) # link callback 
+        self.ble.irq(self.handleNotification) # link callback 
 
         # connect to the peripheral 
         self.ble.active(True) # needed before other BLE functions
@@ -44,6 +44,7 @@ class Bluetooth:
                 time.sleep_ms(10)
             if self._connection_state == _IRQ_PERIPHERAL_DISCONNECT:
                 self._connection_state = None
+                print("Connection failed")
         # we should now be connected 
         assert self._connection_state == _IRQ_PERIPHERAL_CONNECT
 
