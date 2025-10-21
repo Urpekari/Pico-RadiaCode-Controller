@@ -8,7 +8,9 @@ class DeviceNotFound(Exception):
 class ConnectionClosed(Exception):
     pass
 
-import bluetooth
+import aioble 
+import asyncio
+import bluetooth 
 
 from radiacode.bytes_buffer import BytesBuffer
 
@@ -19,6 +21,11 @@ class Bluetooth:
         self.mac = mac
         self.poll_interval = poll_interval
 
+        # constants
+        self._service_UUID = bluetooth.UUID('e63215e5-7003-49d8-96b0-b024798fb901')
+        self._write_fd_UUID = bluetooth.UUID('e63215e6-7003-49d8-96b0-b024798fb901')
+        self._notify_fd_UUID = bluetooth.UUID('e63215e7-7003-49d8-96b0-b024798fb901')
+
         # shared variables from original class
         self._resp_buffer = b''
         self._resp_size = 0
@@ -27,71 +34,97 @@ class Bluetooth:
         self._connection_state = None
 
         # new shared variables
-        self.ble: bluetooth.BLE = bluetooth.BLE()
-        # set up callbacks (notifications)
-        self.ble.irq(self.handleNotification) # link callback 
+        self.device = aioble.Device(aioble.PUBLIC, self.mac)
 
         # connect to the peripheral 
-        self.ble.active(True) # needed before other BLE functions
-        # self.ble.config(mac=mac, addr_mode=0x00) # 0x00 == PUBLIC 
-        while self._connection_state == None:
-            self.ble.gap_connect(
-                addr_type=0x00, # PUBLIC
-                addr=mac
-            )
-            # wait for response and try again if disconnect response 
-            while self._connection_state == None: 
-                time.sleep_ms(10)
-            if self._connection_state == _IRQ_PERIPHERAL_DISCONNECT:
-                self._connection_state = None
-                print("Connection failed")
-        # we should now be connected 
-        assert self._connection_state == _IRQ_PERIPHERAL_CONNECT
+        while True:
+            try:
+                self.connection = asyncio.run(self.device.connect(timeout_ms=2000))
+                
+                break
+            except asyncio.TimeoutError:
+                print("Connection failed with Timeout")
 
-        # get the service by UUID 
+        # set up callbacks (notifications)
         
+        # get the service by UUID 
+        self.service = asyncio.run(self.connection.service(self._service_UUID))
         # get the write_fd characteristics 
+        self.write_fd = self.service.characteristic(self._write_fd_UUID)
         # get the notify_fd characteristics 
-        # write to the notify_fd characteristic 
-
+        self.notify_fd = self.service.characteristic(self._notify_fd_UUID)
+        # write to the notify_fd characteristic (subscribe b'\x01\x00')
+        asyncio.run(self.notify_fd.subscribe(notify=True))
 
     def handleNotification(self, chandle, data): 
-        if chandle == _IRQ_PERIPHERAL_DISCONNECT or chandle == _IRQ_PERIPHERAL_CONNECT:
-            self._connection_state = chandle 
-
         # original library doesn't really use chandle
         # check if this is a new message
+        if self._resp_size == 0:
             # set up size 
+            self._resp_size = 4 + struct.unpack('<i', data[:4])[0]
+            self._resp_buffer = data[4:]
         # copy data into response buffer 
+        else: 
+            self._resp_buffer += data
         # reduce size
-        # assert < not really needed but helpful 
+        self._resp_size -= len(data)
+        # assert not really needed but helpful 
+        assert self._resp_size >= 0
         # if we've received all of the message (size == 0)
+        if self._resp_size == 0:
             # copy it over to _response 
+            self._response = self._resp_buffer
             # reset _resp_buffer
-
-        pass
+            self._resp_buffer = b''
 
     # synchronized, blocking send msg / receive response 
     def execute(self, req) -> BytesBuffer: 
         # check for closing to be safe 
+        if self._closing: 
             # raise error if so 
+            raise ConnectionClosed('Connection is closing')
 
         # send request
         # loop over request in 18 byte steps 
+        for pos in range(0, len(req), 18):
             # write characteristic to write_fd 
+            rp = req[pos : min(pos + 18, len(req))]
+            self.write_fd.write(rp)
 
         # wait for response or timeout 
+        timeout_end = time.time() + 10.0 # 10 s total timeout 
+        while self._response is None and not self._closing: 
+            remaining_time = timeout_end - time.time()
+            if remaining_time <= 0: 
+                raise TimeoutError('Response timeout')
+            
+            poll_time = min(self._poll_interval, remaining_time)
+            
             # waitForNotifications
+            try: 
+                asyncio.run(self.write_fd.notified())
+            except aioble.DisconnectedError as err:
+                raise ConnectionClosed('Bluetooth connection lost') from err
+        if self._closing:
+            raise ConnectionClosed('Connection closed while waiting for response')
 
         # copy response to a new buffer and clear response 
-        return BytesBuffer()
-    
+        br = BytesBuffer(self._response)
+        self._response = None
+        return br 
+
     def close(self):
         self._closing = True
 
         time.sleep_ms(100) # 0.1 s 
 
         # disconnect 
+        try: 
+            asyncio.run(self.connection.disconnect())
+        except: 
+            pass
+        
+        self.connection = None
 
 # class Bluetooth(DefaultDelegate):
 #     def __init__(self, mac, poll_interval: float = 0.01):
