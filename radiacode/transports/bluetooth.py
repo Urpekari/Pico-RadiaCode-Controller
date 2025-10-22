@@ -8,6 +8,9 @@ class DeviceNotFound(Exception):
 class ConnectionClosed(Exception):
     pass
 
+class TimeoutError(Exception):
+    pass
+
 import aioble 
 import asyncio
 import bluetooth 
@@ -19,7 +22,7 @@ class Bluetooth:
     def __init__(self, mac, poll_interval: float = 0.01):
         # constructor variables
         self.mac = mac
-        self.poll_interval = poll_interval
+        self._poll_interval = poll_interval
 
         # constants
         self._service_UUID = bluetooth.UUID('e63215e5-7003-49d8-96b0-b024798fb901')
@@ -33,31 +36,80 @@ class Bluetooth:
         self._closing = False
         self._connection_state = None
 
+        PUBLIC = 0
         # new shared variables
-        self.device = aioble.Device(aioble.PUBLIC, self.mac)
+        self.device = aioble.Device(PUBLIC, self.mac) 
 
+        asyncio.run(self.initialize_async())
+
+    async def initialize_async(self):
         # connect to the peripheral 
         while True:
             try:
-                self.connection = asyncio.run(self.device.connect(timeout_ms=2000))
+                self.connection = await self.device.connect(timeout_ms=2000)
                 
                 break
             except asyncio.TimeoutError:
                 print("Connection failed with Timeout")
+        print("Connection:", self.connection)
 
         # set up callbacks (notifications)
         
-        # get the service by UUID 
-        self.service = asyncio.run(self.connection.service(self._service_UUID))
-        # get the write_fd characteristics 
-        self.write_fd = self.service.characteristic(self._write_fd_UUID)
-        # get the notify_fd characteristics 
-        self.notify_fd = self.service.characteristic(self._notify_fd_UUID)
-        # write to the notify_fd characteristic (subscribe b'\x01\x00')
-        asyncio.run(self.notify_fd.subscribe(notify=True))
+        # get the service by UUID - this is automatic client side?
+        # self.service = asyncio.run(self.connection.service(self._service_UUID))
+        self.service = None 
+        
+        while self.service == None:
+            services = await self._get_services()
+            print(services)
+            for s in services: 
+                if s.uuid == self._service_UUID: 
+                    self.service = s
+                    break
+            if self.service == None:
+                print("Failed to find service, retrying...")
+        print("Service:", self.service)
 
-    def handleNotification(self, chandle, data): 
-        # original library doesn't really use chandle
+        # get characteristics 
+        characteristics = await self._get_characteristics()
+        print("Characteristics:", characteristics)
+
+        # get the write_fd characteristics 
+        self.write_fd = characteristics[self._write_fd_UUID]
+        print("Write_fd", self.write_fd)
+
+        # get the notify_fd characteristics 
+        self.notify_fd = characteristics[self._write_fd_UUID]
+        print("Notify_fd", self.notify_fd)
+
+        # print("Notify_fd descriptors:", self._get_descriptors(self.notify_fd))
+
+        # write to the notify_fd characteristic (subscribe b'\x01\x00')
+        # await self.notify_fd.write(b'\x01\x00')
+        print("Props:", self.notify_fd.properties)
+        await self.notify_fd.subscribe(notify=True)
+        # asyncio.run(self.notify_fd.subscribe(notify=True))
+        print("Descriptors:", await self._get_descriptors(self.notify_fd))
+
+    async def _get_descriptors(self, target_char):
+        descriptors = []
+        async for d in target_char.descriptors(): 
+            descriptors.append(d)
+        return descriptors
+
+    async def _get_characteristics(self):
+        characteristics = {}
+        async for c in self.service.characteristics():
+            characteristics[c.uuid] = c
+        return characteristics
+
+    async def _get_services(self):
+        result = []
+        async for s in self.connection.services():
+            result.append(s)
+        return result
+
+    def handleNotification(self, data): 
         # check if this is a new message
         if self._resp_size == 0:
             # set up size 
@@ -78,7 +130,10 @@ class Bluetooth:
             self._resp_buffer = b''
 
     # synchronized, blocking send msg / receive response 
-    def execute(self, req) -> BytesBuffer: 
+    def execute(self, req) -> BytesBuffer:
+        return asyncio.run(self.execute_async(req))
+
+    async def execute_async(self, req) -> BytesBuffer: 
         # check for closing to be safe 
         if self._closing: 
             # raise error if so 
@@ -89,12 +144,12 @@ class Bluetooth:
         for pos in range(0, len(req), 18):
             # write characteristic to write_fd 
             rp = req[pos : min(pos + 18, len(req))]
-            self.write_fd.write(rp)
+            await self.write_fd.write(rp)
 
         # wait for response or timeout 
-        timeout_end = time.time() + 10.0 # 10 s total timeout 
+        timeout_end = time.ticks_ms() + (10 * 1000) # 10 s total timeout 
         while self._response is None and not self._closing: 
-            remaining_time = timeout_end - time.time()
+            remaining_time = timeout_end - time.ticks_ms()
             if remaining_time <= 0: 
                 raise TimeoutError('Response timeout')
             
@@ -102,9 +157,12 @@ class Bluetooth:
             
             # waitForNotifications
             try: 
-                asyncio.run(self.write_fd.notified())
-            except aioble.DisconnectedError as err:
+                data = asyncio.wait_for(self.notify_fd.notified(), timeout=poll_time)
+                self.handleNotification(data)
+            except aioble.DeviceDisconnectedError as err:
                 raise ConnectionClosed('Bluetooth connection lost') from err
+            except asyncio.TimeoutError:
+                continue
         if self._closing:
             raise ConnectionClosed('Connection closed while waiting for response')
 
@@ -123,7 +181,7 @@ class Bluetooth:
             asyncio.run(self.connection.disconnect())
         except: 
             pass
-        
+
         self.connection = None
 
 # class Bluetooth(DefaultDelegate):

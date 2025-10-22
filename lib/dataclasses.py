@@ -1,6 +1,6 @@
 # type: ignore
 def dataclass(_cls=None, *, init=True, repr=True, eq=True):
-  print(type(_cls))
+  # print(type(_cls))
   def wrap(cls):
     fields = getattr(cls, "__annotations__", {}) #cls.__annotations__
 
