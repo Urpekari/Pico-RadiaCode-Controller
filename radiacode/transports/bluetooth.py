@@ -161,7 +161,18 @@ class Bluetooth:
             print("Write done.")
 
         elif event == _IRQ_GATTC_NOTIFY:
-            conn_handle, value_handle, notify_data = data
+            conn_handle, value_handle, notify_data_mv = data
+
+            notify_data = bytes(notify_data_mv)
+        
+            print(notify_data)
+
+            if value_handle == self._notify_fd_handle:
+                print("notify handle")
+
+            if value_handle == self._write_fd_handle:
+                print("write handle")
+
             # check if this is a new message
             if self._resp_size == 0:
                 # set up size 
@@ -195,6 +206,7 @@ class Bluetooth:
             rp = req[pos : min(pos + 18, len(req))]
             # await self.write_fd.write(rp)
             self.blocking_write(self._write_fd_handle, rp)
+            # self._ble.gattc_write(self._conn_handle, self._write_fd_handle, rp)
 
         # wait for response or timeout 
         timeout_end = time.ticks_ms() + (10 * 1000) # 10 s total timeout 
