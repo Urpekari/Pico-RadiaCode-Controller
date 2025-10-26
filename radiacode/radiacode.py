@@ -242,9 +242,27 @@ class RadiaCode:
         assert r.size() == 0
         return '-'.join(f'{v:08X}' for v in serial_groups)
 
+    def decode_cp1251(self, b: bytes) -> str:
+        out = []
+        for v in b:
+            if v < 0x80:
+                out.append(chr(v))                       # ASCII
+            elif 0xC0 <= v <= 0xDF:
+                out.append(chr(0x0410 + (v - 0xC0)))    # Cyrillic capital А..Я
+            elif 0xE0 <= v <= 0xFF:
+                out.append(chr(0x0430 + (v - 0xE0)))    # Cyrillic small а..я
+            elif v == 0xA8:
+                out.append('\u0401')                    # Ё
+            elif v == 0xB8:
+                out.append('\u0451')                    # ё
+            else:
+                # fallback: keep the byte as the same codepoint (like latin-1)
+                out.append(chr(v))
+        return ''.join(out)
+
     def configuration(self) -> str:
         r = self.read_request(VS.CONFIGURATION)
-        return r.data().decode('cp1251')
+        return self.decode_cp1251(r.data()[12:])  #. decode('cp1251', 'replace')
 
     def text_message(self) -> str:
         r = self.read_request(VS.TEXT_MESSAGE)

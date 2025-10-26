@@ -118,7 +118,7 @@ class Bluetooth:
 
     def handleNotification(self, chandle, data): 
         event = chandle 
-        print(f"Event! ({event})")
+        # print(f"Event! ({event})")
         if event == _IRQ_PERIPHERAL_CONNECT:
             conn_handle, addr_type, addr = data
             if addr_type == self._addr_type and addr == self._addr: 
@@ -158,20 +158,22 @@ class Bluetooth:
         elif event == _IRQ_GATTC_WRITE_DONE:
             conn_handle, value_handle, status = data
             self._writing = False
-            print("Write done.")
+            # print("Write done.")
 
         elif event == _IRQ_GATTC_NOTIFY:
             conn_handle, value_handle, notify_data_mv = data
 
             notify_data = bytes(notify_data_mv)
         
-            print(notify_data)
+            # print(notify_data)
 
             if value_handle == self._notify_fd_handle:
-                print("notify handle")
+                # print("notify handle")
+                pass
 
             if value_handle == self._write_fd_handle:
-                print("write handle")
+                # print("write handle")
+                pass
 
             # check if this is a new message
             if self._resp_size == 0:
