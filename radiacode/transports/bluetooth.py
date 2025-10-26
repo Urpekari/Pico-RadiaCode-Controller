@@ -2,18 +2,22 @@ import struct
 import platform
 import time
 
+
 class DeviceNotFound(Exception):
     pass
+
 
 class ConnectionClosed(Exception):
     pass
 
+
 class TimeoutError(Exception):
     pass
 
-import aioble 
+
+import aioble
 import asyncio
-import bluetooth 
+import bluetooth
 
 from radiacode.bytes_buffer import BytesBuffer
 
@@ -44,44 +48,44 @@ _ADV_DIRECT_IND = const(0x01)
 _ADV_SCAN_IND = const(0x02)
 _ADV_NONCONN_IND = const(0x03)
 
-class Bluetooth: 
 
+class Bluetooth:
     def __init__(self, mac, poll_interval: float = 0.01):
         # constructor variables
         self.mac = mac
         self._poll_interval = poll_interval
 
         # constants
-        self._service_UUID = bluetooth.UUID('e63215e5-7003-49d8-96b0-b024798fb901')
-        self._write_fd_UUID = bluetooth.UUID('e63215e6-7003-49d8-96b0-b024798fb901')
-        self._notify_fd_UUID = bluetooth.UUID('e63215e7-7003-49d8-96b0-b024798fb901')
+        self._service_UUID = bluetooth.UUID("e63215e5-7003-49d8-96b0-b024798fb901")
+        self._write_fd_UUID = bluetooth.UUID("e63215e6-7003-49d8-96b0-b024798fb901")
+        self._notify_fd_UUID = bluetooth.UUID("e63215e7-7003-49d8-96b0-b024798fb901")
 
         # shared variables from original class
-        self._resp_buffer = b''
+        self._resp_buffer = b""
         self._resp_size = 0
         self._response = None
         self._closing = False
         self._connection_state = None
 
         self._conn_handle = None
-        self._start_handle = None 
+        self._start_handle = None
         self._end_handle = None
         self._ble = bluetooth.BLE()
-        self._ble.active(True) 
+        self._ble.active(True)
         # set up callbacks (notifications)
         self._ble.irq(self.handleNotification)
 
         # connect to the peripheral
-        self.mac_bytes = bytes.fromhex(self.mac.replace(":",""))
+        self.mac_bytes = bytes.fromhex(self.mac.replace(":", ""))
         self._addr_type = 0x00
         self._addr = self.mac_bytes
 
-        self._conn_handle = None 
-        while self._conn_handle is None: 
+        self._conn_handle = None
+        while self._conn_handle is None:
             self._ble.gap_connect(self._addr_type, self._addr)
             start_time = time.ticks_ms()
-            while time.ticks_ms() - start_time < 2000: 
-                if self._conn_handle is not None: 
+            while time.ticks_ms() - start_time < 2000:
+                if self._conn_handle is not None:
                     break
                 time.sleep_ms(100)
         print("Connection:", self._conn_handle)
@@ -92,13 +96,15 @@ class Bluetooth:
         # get the write_fd characteristics
         # get the notify_fd characteristics
         self._write_fd_handle = None
-        self._notify_fd_handle = None 
+        self._notify_fd_handle = None
         while (self._write_fd_handle is None) or (self._notify_fd_handle is None):
             # search for any characteristics (this chains)
             self._ble.gattc_discover_services(self._conn_handle, self._service_UUID)
             start_time = time.ticks_ms()
-            while time.ticks_ms() - start_time < 2000: 
-                if (self._write_fd_handle is not None) and (self._notify_fd_handle is not None): 
+            while time.ticks_ms() - start_time < 2000:
+                if (self._write_fd_handle is not None) and (
+                    self._notify_fd_handle is not None
+                ):
                     break
                 time.sleep_ms(100)
             if (self._write_fd_handle is None) or (self._notify_fd_handle is None):
@@ -108,7 +114,7 @@ class Bluetooth:
         print("Subscribing")
         # self.p.writeCharacteristic(notify_fd + 1, b'\x01\x00')
         self._notify_fd_cccd_handle = self._notify_fd_handle + 1
-        self.blocking_write(self._notify_fd_cccd_handle, b'\x01\x00')
+        self.blocking_write(self._notify_fd_cccd_handle, b"\x01\x00")
 
     def blocking_write(self, target_handle, data):
         self._writing = True
@@ -116,12 +122,12 @@ class Bluetooth:
         while self._writing:
             time.sleep_ms(100)
 
-    def handleNotification(self, chandle, data): 
-        event = chandle 
+    def handleNotification(self, chandle, data):
+        event = chandle
         # print(f"Event! ({event})")
         if event == _IRQ_PERIPHERAL_CONNECT:
             conn_handle, addr_type, addr = data
-            if addr_type == self._addr_type and addr == self._addr: 
+            if addr_type == self._addr_type and addr == self._addr:
                 self._conn_handle = conn_handle
 
         elif event == _IRQ_GATTC_SERVICE_RESULT:
@@ -164,7 +170,7 @@ class Bluetooth:
             conn_handle, value_handle, notify_data_mv = data
 
             notify_data = bytes(notify_data_mv)
-        
+
             # print(notify_data)
 
             if value_handle == self._notify_fd_handle:
@@ -177,50 +183,50 @@ class Bluetooth:
 
             # check if this is a new message
             if self._resp_size == 0:
-                # set up size 
-                self._resp_size = 4 + struct.unpack('<i', notify_data[:4])[0]
+                # set up size
+                self._resp_size = 4 + struct.unpack("<i", notify_data[:4])[0]
                 self._resp_buffer = notify_data[4:]
-            # copy data into response buffer 
-            else: 
+            # copy data into response buffer
+            else:
                 self._resp_buffer += notify_data
             # reduce size
             self._resp_size -= len(notify_data)
-            # assert not really needed but helpful 
+            # assert not really needed but helpful
             assert self._resp_size >= 0
             # if we've received all of the message (size == 0)
             if self._resp_size == 0:
-                # copy it over to _response 
+                # copy it over to _response
                 self._response = self._resp_buffer
                 # reset _resp_buffer
-                self._resp_buffer = b''
+                self._resp_buffer = b""
 
-    # synchronized, blocking send msg / receive response 
-    def execute(self, req) -> BytesBuffer: 
-        # check for closing to be safe 
-        if self._closing: 
-            # raise error if so 
-            raise ConnectionClosed('Connection is closing')
+    # synchronized, blocking send msg / receive response
+    def execute(self, req) -> BytesBuffer:
+        # check for closing to be safe
+        if self._closing:
+            # raise error if so
+            raise ConnectionClosed("Connection is closing")
 
         # send request
-        # loop over request in 18 byte steps 
+        # loop over request in 18 byte steps
         for pos in range(0, len(req), 18):
-            # write characteristic to write_fd 
+            # write characteristic to write_fd
             rp = req[pos : min(pos + 18, len(req))]
             # await self.write_fd.write(rp)
             self.blocking_write(self._write_fd_handle, rp)
             # self._ble.gattc_write(self._conn_handle, self._write_fd_handle, rp)
 
-        # wait for response or timeout 
-        timeout_end = time.ticks_ms() + (10 * 1000) # 10 s total timeout 
-        while self._response is None and not self._closing: 
+        # wait for response or timeout
+        timeout_end = time.ticks_ms() + (10 * 1000)  # 10 s total timeout
+        while self._response is None and not self._closing:
             remaining_time = timeout_end - time.ticks_ms()
-            if remaining_time <= 0: 
-                raise TimeoutError('Response timeout')
-            
+            if remaining_time <= 0:
+                raise TimeoutError("Response timeout")
+
             poll_time = min(self._poll_interval, remaining_time)
-            
+
             # waitForNotifications
-            # try: 
+            # try:
             #     pass
             #     # data = asyncio.wait_for(self.notify_fd.notified(), timeout=poll_time)
             # except aioble.DeviceDisconnectedError as err:
@@ -228,25 +234,26 @@ class Bluetooth:
             # except asyncio.TimeoutError:
             #     continue
         if self._closing:
-            raise ConnectionClosed('Connection closed while waiting for response')
+            raise ConnectionClosed("Connection closed while waiting for response")
 
-        # copy response to a new buffer and clear response 
+        # copy response to a new buffer and clear response
         br = BytesBuffer(self._response)
         self._response = None
-        return br 
+        return br
 
     def close(self):
         self._closing = True
 
-        time.sleep_ms(100) # 0.1 s 
+        time.sleep_ms(100)  # 0.1 s
 
-        # disconnect 
-        try: 
+        # disconnect
+        try:
             self._ble.gap_disconnect(self._conn_handle)
-        except: 
+        except:
             pass
 
         self.connection = None
+
 
 # class Bluetooth(DefaultDelegate):
 #     def __init__(self, mac, poll_interval: float = 0.01):
