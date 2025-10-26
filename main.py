@@ -11,29 +11,36 @@ from radiacode import DoseRateDB, RareData, RawData, RealTimeData, Event
 BLUETOOTH_MAC = "52:43:06:60:17:dd"
 SPECTRUM_DURATION_MS = (60 * 1000)
 
+led = machine.Pin("LED", machine.Pin.OUT)
+
 while True: 
-  print("Setting up SD card...")
-  spi = machine.SPI()
-  spi.init()
-  sd = sdcard.SDCard(spi, machine.Pin.board.GP17)
-  print("Mounting filesystem...")
-  vfs = os.VfsFat(sd)
-  os.mount(vfs, "/fs")
+  try:
+    print("Setting up SD card...")
+    spi = machine.SPI()
+    spi.init()
+    sd = sdcard.SDCard(spi, machine.Pin.board.GP17)
+    print("Mounting filesystem...")
+    vfs = os.VfsFat(sd)
+    os.mount(vfs, "/fs")
 
-  it = 0
-  data_file_path = "" 
-  while True: 
-    try: 
-      data_file_path = f"/fs/data{it}.txt" 
-      f_info = os.stat(data_file_path)
-      it += 1
-    except OSError:
-      break # the name is unused
+    it = 0
+    data_file_path = "" 
+    while True: 
+      try: 
+        data_file_path = f"/fs/data{it}.txt" 
+        f_info = os.stat(data_file_path)
+        it += 1
+      except OSError:
+        break # the name is unused
 
-  # create data file 
-  data_file = open(data_file_path, "w")
+    # create data file 
+    data_file = open(data_file_path, "a")
+    data_file.close()
 
-  print(f"Created data file {data_file_path}")
+    print(f"Created data file {data_file_path}")
+  except Exception as e:
+    print(e)
+    continue
 
   print(f'Connecting to Radiacode via Bluetooth (MAC address: {BLUETOOTH_MAC})')
 
@@ -64,8 +71,10 @@ while True:
     #     time.sleep(2)
     start = time.ticks_ms() 
     while True: 
+      led.toggle()
       for v in rc.data_buf(): 
         print(v.dt.isoformat(), v)
+        data_file = open(data_file_path, "a")
         t = type(v)
         if t == DoseRateDB:
           data_file.write(f"DoseRateDB; {v.dt}; {v.count}; {v.count_rate}; {v.dose_rate}; {v.dose_rate_err}; {v.flags};\n")
@@ -77,19 +86,27 @@ while True:
           data_file.write(f"RawData; {v.dt}; {v.count_rate}; {v.dose_rate};\n")
         elif t == Event: 
           data_file.write(f"Event; {v.dt}; {v.event}; {v.event_param1}; {v.flags};\n")
+        data_file.flush()
+        data_file.close()
       if time.ticks_ms() - start > SPECTRUM_DURATION_MS:
         start = time.ticks_ms()
         # read the spectrogram 
         spectrum = rc.spectrum()
-        data_file.write(f"Spectrum; {spectrum.duration}; {spectrum.a0}; {spectrum.a1}; {spectrum.a2}; {spectrum.counts};")
+
+        data_file = open(data_file_path, "a")
+        data_file.write(f"Spectrum; {spectrum.duration}; {spectrum.a0}; {spectrum.a1}; {spectrum.a2}; {spectrum.counts};\n")
+        data_file.flush()
+        data_file.close()
+
         print(f"{spectrum.duration} Spectrum: {spectrum}")
         # restart it 
         rc.spectrum_reset()
-
   except Exception: 
     # try to close data file if possible 
     try: 
       data_file.close()
     except Exception:
       pass
+
+    machine.reset()
     continue 
