@@ -75,6 +75,7 @@ while True:
             for v in rc.data_buf():
                 print(v.dt.isoformat(), v)
                 data_file = open(data_file_path, "a")
+                data_file.write(f"{time.ticks_ms()}; ")
                 t = type(v)
                 if t == DoseRateDB:
                     data_file.write(
@@ -105,7 +106,7 @@ while True:
 
                 data_file = open(data_file_path, "a")
                 data_file.write(
-                    f"Spectrum; {spectrum.duration}; {spectrum.a0}; {spectrum.a1}; {spectrum.a2}; {spectrum.counts};\n"
+                    f"{time.ticks_ms()}; Spectrum; {spectrum.duration}; {spectrum.a0}; {spectrum.a1}; {spectrum.a2}; {spectrum.counts};\n"
                 )
                 data_file.flush()
                 data_file.close()
