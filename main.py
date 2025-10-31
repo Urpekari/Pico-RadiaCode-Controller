@@ -10,11 +10,30 @@ from radiacode import DoseRateDB, RareData, RawData, RealTimeData, Event
 
 BLUETOOTH_MAC = "52:43:06:60:17:dd"
 SPECTRUM_DURATION_MS = 60 * 1000
+WATCHDOG_TIMEOUT = 8388
+
+
+def on_wdt_reset():
+    print("Watchdog reset")
+    time.sleep_ms(1000)
+
+
+if machine.reset_cause() == machine.WDT_RESET:
+    on_wdt_reset()
 
 led = machine.Pin("LED", machine.Pin.OUT)
+wdt = machine.WDT(timeout=WATCHDOG_TIMEOUT)
+
+
+def heartbeat():
+    led.toggle()
+    wdt.feed()  # reset watchdog timer
+
 
 while True:
     try:
+        heartbeat()  # -----------------------------------------------------------------------------------------------
+
         print("Setting up SD card...")
         spi = machine.SPI()
         spi.init()
@@ -27,6 +46,8 @@ while True:
         data_file_path = ""
         while True:
             try:
+                heartbeat()  # -------------------------------------------------------------------------------------
+
                 data_file_path = f"/fs/data{it}.txt"
                 f_info = os.stat(data_file_path)
                 it += 1
@@ -44,11 +65,15 @@ while True:
 
     print(f"Connecting to Radiacode via Bluetooth (MAC address: {BLUETOOTH_MAC})")
 
+    heartbeat()  # ---------------------------------------------------------------------------------------------------------
+
     try:
         rc = RadiaCode(bluetooth_mac=BLUETOOTH_MAC)
     except DeviceNotFoundBT as e:
         print(e)
         continue
+
+    heartbeat()  # ----------------------------------------------------------------------------------------------------------
 
     try:
         serial = rc.serial_number()
@@ -71,7 +96,8 @@ while True:
         #     time.sleep(2)
         start = time.ticks_ms()
         while True:
-            led.toggle()
+            heartbeat()  # ----------------------------------------------------------------------------------------------------
+
             for v in rc.data_buf():
                 print(v.dt.isoformat(), v)
                 data_file = open(data_file_path, "a")
@@ -100,6 +126,8 @@ while True:
                 data_file.flush()
                 data_file.close()
             if time.ticks_ms() - start > SPECTRUM_DURATION_MS:
+                heartbeat()  # ---------------------------------------------------------------------------------------------------
+
                 start = time.ticks_ms()
                 # read the spectrogram
                 spectrum = rc.spectrum()
