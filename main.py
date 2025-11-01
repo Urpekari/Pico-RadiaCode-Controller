@@ -29,6 +29,7 @@ def heartbeat():
     led.toggle()
     wdt.feed()  # reset watchdog timer
 
+
 heartbeat()  # -----------------------------------------------------------------------------------------------
 while True:
     try:
