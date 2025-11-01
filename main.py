@@ -1,3 +1,9 @@
+"""
+Controller for the RadiaCode-10X Radiation Detector. Receives and stores data
+from the device, takes spectrogram at set intervals. Radiacode control based on
+https://github.com/cdump/radiacode
+"""
+
 import machine
 import time
 import os
@@ -43,6 +49,7 @@ while True:
 
         it = 0
         data_file_path = ""
+        # find the next available data_.txt file name 
         while True:
             try:
                 heartbeat()  # -------------------------------------------------------------------------------------
@@ -66,6 +73,7 @@ while True:
 
     heartbeat()  # ---------------------------------------------------------------------------------------------------------
 
+    # find and connect to RadiaCode
     try:
         rc = RadiaCode(bluetooth_mac=BLUETOOTH_MAC)
     except DeviceNotFoundBT as e:
@@ -87,21 +95,17 @@ while True:
         print(f"### Spectrum: {spectrum}")
         print("--------")
 
-        # print('### DataBuf:')
-        # while True:
-        #     for v in rc.data_buf():
-        #         print(v.dt.isoformat(), v)
-
-        #     time.sleep(2)
         start = time.ticks_ms()
         while True:
             heartbeat()  # ----------------------------------------------------------------------------------------------------
 
+            # infinite loop, check if there is data to process and read it if there is 
             for v in rc.data_buf():
                 print(v.dt.isoformat(), v)
                 data_file = open(data_file_path, "a")
                 data_file.write(f"{time.ticks_ms()}; ")
                 t = type(v)
+                # store class fields for each return option
                 if t == DoseRateDB:
                     data_file.write(
                         f"DoseRateDB; {v.dt}; {v.count}; {v.count_rate}; {v.dose_rate}; {v.dose_rate_err}; {v.flags};\n"
@@ -122,6 +126,7 @@ while True:
                     data_file.write(
                         f"Event; {v.dt}; {v.event}; {v.event_param1}; {v.flags};\n"
                     )
+                # flush and close to reduce caching 
                 data_file.flush()
                 data_file.close()
             if time.ticks_ms() - start > SPECTRUM_DURATION_MS:
