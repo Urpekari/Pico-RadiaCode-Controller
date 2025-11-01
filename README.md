@@ -1,7 +1,7 @@
 # Pico-RadiaCode-Controller
 An controller to handle automated RadiaCode 10X operation
 
-Based on (radiacode library)[https://github.com/cdump/radiacode] from (cdump)[https://github.com/cdump]
+Based on [radiacode library](https://github.com/cdump/radiacode) from [cdump](https://github.com/cdump)
 
 ### Toolchain
 * MicroPython

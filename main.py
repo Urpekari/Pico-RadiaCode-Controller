@@ -29,11 +29,9 @@ def heartbeat():
     led.toggle()
     wdt.feed()  # reset watchdog timer
 
-
+heartbeat()  # -----------------------------------------------------------------------------------------------
 while True:
     try:
-        heartbeat()  # -----------------------------------------------------------------------------------------------
-
         print("Setting up SD card...")
         spi = machine.SPI()
         spi.init()
@@ -60,7 +58,7 @@ while True:
 
         print(f"Created data file {data_file_path}")
     except Exception as e:
-        print(e)
+        print("ERROR: ", e)
         continue
 
     print(f"Connecting to Radiacode via Bluetooth (MAC address: {BLUETOOTH_MAC})")
