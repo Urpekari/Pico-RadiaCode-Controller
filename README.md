@@ -1,7 +1,7 @@
 # Pico-RadiaCode-Controller
-An controller to handle automated RadiaCode 10X operation
+A controller to handle automated [RadiaCode](https://www.radiacode.com) 10X operation
 
-Based on [radiacode library](https://github.com/cdump/radiacode) from [cdump](https://github.com/cdump)
+Based on the [radiacode library](https://github.com/cdump/radiacode) from [cdump](https://github.com/cdump)
 
 ### Toolchain
 * MicroPython
@@ -10,5 +10,14 @@ Based on [radiacode library](https://github.com/cdump/radiacode) from [cdump](ht
 * [mpremote 1.26.1](https://pypi.org/project/mpremote/) installed with `uv tool install mpremote`
   * [docs](https://docs.micropython.org/en/latest/reference/mpremote.html) 
 
-### Bluetooth mac
+### Bluetooth MAC
+To use the Bluetooth connectivity of the RadiaCode the Pico must know the RadiaCode's Bluetooth MAC Address (defined as a constant in [main.py](/main.py)). 
+
+For example from: 
+```
 RadiaCode-102#RC-102-006109 52:43:06:60:17:dd
+```
+Use: 
+```python
+BLUETOOTH_MAC = "52:43:06:60:17:dd"
+```
