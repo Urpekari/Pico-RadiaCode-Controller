@@ -13,7 +13,7 @@ starting_time = datetime.strptime(starting_time_input, "%Y-%m-%d %H:%M:%S")
 
 # read data file, split into time stamped csv for data and spectrum
 input_file_path = os.path.join(
-    "data", "data1.txt"
+    "data", "data2.txt"
 )  # input("Enter the path to the input data file: ")
 
 spectrum_output = os.path.join("output", "spectrum_data.csv")
@@ -45,7 +45,7 @@ with (
 ):
     # write headers
     f_rad.write(
-        "Adj Datetime (Millis), Adj Datetime (Datetime), Millis, Type, Datetime, Count Rate (CPS), Count Rate Err (%), Dose Rate (μSv/hr), Dose Rate Err (%), Flags, Real Time Flags, \n"
+        "Adj Datetime (Millis), Adj Datetime (Datetime), Millis, Type, Datetime, Count Rate (CPS), Count Rate Err (%), Dose Rate (uSv/hr), Dose Rate Err (%), Flags, Real Time Flags, \n"
     )
     f_spec.write(spectrum_header + "\n")
 
