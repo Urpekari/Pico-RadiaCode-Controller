@@ -124,7 +124,7 @@ while True:
                     )
                 elif t == Event:
                     data_file.write(
-                        f"Event; {v.dt}; {v.event}; {v.event_param1}; {v.flags};\n"
+                        f"Event; {v.dt}; {v.event.name}; {v.event_param1}; {v.flags};\n"
                     )
                 # flush and close to reduce caching 
                 data_file.flush()

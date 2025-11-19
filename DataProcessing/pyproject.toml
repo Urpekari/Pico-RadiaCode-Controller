@@ -1,12 +1,9 @@
 [project]
-name = "pico-radiacode-controller"
+name = "dataprocessing"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = []
-
-[tool.uv.workspace]
-members = [
-    "DataProcessing",
+dependencies = [
+    "pandas>=2.3.3",
 ]
