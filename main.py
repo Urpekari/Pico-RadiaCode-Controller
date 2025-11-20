@@ -38,7 +38,6 @@ def heartbeat():
 
 heartbeat()  # -----------------------------------------------------------------------------------------------
 while True:
-
     print(f"Connecting to Radiacode via Bluetooth (MAC address: {BLUETOOTH_MAC})")
 
     heartbeat()  # ---------------------------------------------------------------------------------------------------------
@@ -63,7 +62,7 @@ while True:
 
         it = 0
         data_file_path = ""
-        # find the next available data_.txt file name 
+        # find the next available data_.txt file name
         while True:
             try:
                 heartbeat()  # -------------------------------------------------------------------------------------
@@ -102,7 +101,7 @@ while True:
         while True:
             heartbeat()  # ----------------------------------------------------------------------------------------------------
 
-            # infinite loop, check if there is data to process and read it if there is 
+            # infinite loop, check if there is data to process and read it if there is
             for v in rc.data_buf():
                 print(v.dt.isoformat(), v)
                 data_file = open(data_file_path, "a")
@@ -129,7 +128,7 @@ while True:
                     data_file.write(
                         f"Event; {v.dt}; {v.event.name}; {v.event_param1}; {v.flags};\n"
                     )
-                # flush and close to reduce caching 
+                # flush and close to reduce caching
                 data_file.flush()
                 data_file.close()
             if time.ticks_ms() - start > SPECTRUM_DURATION_MS:
