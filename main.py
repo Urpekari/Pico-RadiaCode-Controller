@@ -38,6 +38,20 @@ def heartbeat():
 
 heartbeat()  # -----------------------------------------------------------------------------------------------
 while True:
+
+    print(f"Connecting to Radiacode via Bluetooth (MAC address: {BLUETOOTH_MAC})")
+
+    heartbeat()  # ---------------------------------------------------------------------------------------------------------
+
+    # find and connect to RadiaCode
+    try:
+        rc = RadiaCode(bluetooth_mac=BLUETOOTH_MAC)
+    except DeviceNotFoundBT as e:
+        print(e)
+        continue
+
+    heartbeat()  # ---------------------------------------------------------------------------------------------------------
+
     try:
         print("Setting up SD card...")
         spi = machine.SPI()
@@ -67,17 +81,6 @@ while True:
         print(f"Created data file {data_file_path}")
     except Exception as e:
         print("ERROR: ", e)
-        continue
-
-    print(f"Connecting to Radiacode via Bluetooth (MAC address: {BLUETOOTH_MAC})")
-
-    heartbeat()  # ---------------------------------------------------------------------------------------------------------
-
-    # find and connect to RadiaCode
-    try:
-        rc = RadiaCode(bluetooth_mac=BLUETOOTH_MAC)
-    except DeviceNotFoundBT as e:
-        print(e)
         continue
 
     heartbeat()  # ----------------------------------------------------------------------------------------------------------
