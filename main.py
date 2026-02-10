@@ -28,12 +28,12 @@ if machine.reset_cause() == machine.WDT_RESET:
     on_wdt_reset()
 
 led = machine.Pin("LED", machine.Pin.OUT)
-wdt = machine.WDT(timeout=WATCHDOG_TIMEOUT)
+# wdt = machine.WDT(timeout=WATCHDOG_TIMEOUT)
 
 
 def heartbeat():
     led.toggle()
-    wdt.feed()  # reset watchdog timer
+    # wdt.feed()  # reset watchdog timer
 
 
 heartbeat()  # -----------------------------------------------------------------------------------------------
@@ -125,9 +125,10 @@ while True:
                         f"RawData; {v.dt}; {v.count_rate}; {v.dose_rate};\n"
                     )
                 elif t == Event:
-                    data_file.write(
-                        f"Event; {v.dt}; {v.event.name}; {v.event_param1}; {v.flags};\n"
-                    )
+                    print("fake write")
+                    # data_file.write(
+                    #     f"Event; {v.dt}; {v.event.name}; {v.event_param1}; {v.flags};\n"
+                    # )
                 # flush and close to reduce caching
                 data_file.flush()
                 data_file.close()
@@ -147,7 +148,7 @@ while True:
 
                 print(f"{spectrum.duration} Spectrum: {spectrum}")
                 # restart it
-                rc.spectrum_reset()
+                # rc.spectrum_reset()
     except Exception:
         # try to close data file if possible
         try:
