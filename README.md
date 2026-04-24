@@ -63,7 +63,13 @@ Some ESP32 family of modules (like the ESP32-S3 and ESP32-S2) require a new stub
 
 Those files can be found [here](https://github.com/espressif/esptool/tree/master/esptool/targets/stub_flasher)
 ---
+Remove the following lines in main.py:
+
+* Everything between lines 25-31
+* Every call to heartbeat()
+
 Copy the following files to the device:
+
 ```
 	|_ /aioble
 	|   |_ central.py
