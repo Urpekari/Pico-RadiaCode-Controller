@@ -58,6 +58,11 @@ Copy the following files to the device:
 ```
 
 ### ESP32-S3
+---
+Some ESP32 family of modules (like the ESP32-S3 and ESP32-S2) require a new stub upload config file (in json format) for esptool.
+
+Those files can be found [here](https://github.com/espressif/esptool/tree/master/esptool/targets/stub_flasher)
+---
 Copy the following files to the device:
 ```
 	|_ /aioble
