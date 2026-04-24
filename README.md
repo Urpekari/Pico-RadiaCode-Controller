@@ -3,12 +3,103 @@ A controller to handle automated [RadiaCode](https://www.radiacode.com) 10X oper
 
 Based on the [radiacode library](https://github.com/cdump/radiacode) from [cdump](https://github.com/cdump)
 
+## Additional compatibility 
+This project aims to broaden the scope of the [Original Project](https://github.com/ASU-ASCEND/Pico-RadiaCode-Controller)
+
+It has been tested on the following hardware:
+* RP2040 (Raspberry Pi Pico W)
+* ESP32-S3 (N16R8)
+
 ### Toolchain
-* MicroPython
-  * [RPI_PICO_W v1.25.1 (2025-09-11)](https://micropython.org/download/RPI_PICO_W/)
-  * [RPI_PICO2_W v1.26.1 (2025-09-11)](https://micropython.org/download/RPI_PICO2_W/)
-* [mpremote 1.26.1](https://pypi.org/project/mpremote/) installed with `uv tool install mpremote`
-  * [docs](https://docs.micropython.org/en/latest/reference/mpremote.html) 
+* Thonny
+* Micropython 1.28 works, older variants will probably work too. (*The original project recommended 1.26*)
+* mpremote
+* esptool (For ESP32 devices only)
+
+## Deployment notes 
+Thankfully micropython is pretty straightforward, but still, just in case.
+
+```
+The version here has disabled all SD card functions because we don't have an SD card module ready for our test boards.
+We will fix that soon and put the SD card functions back.
+```
+
+### RP2040
+Copy the following files to the device:
+```
+	|_ /DataProcessing
+	|   |_ process_data.py
+	|
+	|_ /lib
+	|   |_ dataclasses.py
+	|   |_ enum.py
+	|   |_ sdcard.py
+	|
+	|_ /radiacode
+	|   |_ /decoders
+	|   |   |_ databuf.py
+	|   |   |_ spectrum.py
+	|   |   |_ __init__.py
+	|   |
+	|   |_ /transports
+	|   |   |_ bluetooth.py
+	|   |   |_ usb.py
+	|   |   |_ __init__.py
+	|   |
+	|   |_ bytes_buffer.py
+	|   |_ radiacode.py
+	|   |_ types.py
+	|   |_ __init__.py
+	|
+	|_ boot.py
+	|_ datetime.py
+	|_ main.py
+	|_ process_data.py
+```
+
+### ESP32-S3
+Copy the following files to the device:
+```
+	|_ /aioble
+	|   |_ central.py
+	|   |_ client.py
+	|   |_ core.py
+	|   |_ device.py
+	|   |_ l2cap.py
+	|   |_ peripheral.py
+	|   |_ security.py
+	|   |_ server.py
+	|   |_ __init__.py
+	|
+	|_ /DataProcessing
+	|   |_ process_data.py
+	|
+	|_ /lib
+	|   |_ dataclasses.py
+	|   |_ enum.py
+	|   |_ sdcard.py
+	|
+	|_ /radiacode
+	|   |_ /decoders
+	|   |   |_ databuf.py
+	|   |   |_ spectrum.py
+	|   |   |_ __init__.py
+	|   |
+	|   |_ /transports
+	|   |   |_ bluetooth.py
+	|   |   |_ usb.py
+	|   |   |_ __init__.py
+	|   |
+	|   |_ bytes_buffer.py
+	|   |_ radiacode.py
+	|   |_ types.py
+	|   |_ __init__.py
+	|
+	|_ boot.py
+	|_ datetime.py
+	|_ main.py
+	|_ process_data.py
+```
 
 ### Bluetooth MAC
 To use the Bluetooth connectivity of the RadiaCode the Pico must know the RadiaCode's Bluetooth MAC Address (defined as a constant in [main.py](/main.py)). 
@@ -21,3 +112,6 @@ Use:
 ```python
 BLUETOOTH_MAC = "52:43:06:60:17:dd"
 ```
+
+### USB
+Working on it...
