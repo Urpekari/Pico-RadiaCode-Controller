@@ -112,7 +112,29 @@ Copy the following files to the device:
 	|_ process_data.py
 ```
 
-### Bluetooth MAC
+### M5Stack tested pinout
+**GNSS (And extra sensors)**:
+
+| Pin Name | GPIO | Used by       |
+| -------- | ---- | ------------- |
+| PPS      | 10   | GNSS UART     |
+| TX       | 18   | GNSS UART     |
+| RX       | 17   | GNSS UART     |
+| SDA      | 12   | Extra Sensors |
+| SCL      | 11   | Extra Sensors |
+
+**LoRa (SX1278)**
+
+| Pin Name | GPIO | 
+| ---- | --- | 
+| RST  | 5   | 
+| CS   | 1   | 
+| IRQ  | 14  | 
+| MOSI | 37  | 
+| MISO | 35  | 
+| CLK  | 36  | 
+
+## Bluetooth MAC
 To use the Bluetooth connectivity of the RadiaCode the Pico must know the RadiaCode's Bluetooth MAC Address (defined as a constant in [main.py](/main.py)). 
 
 For example from: 

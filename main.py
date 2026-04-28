@@ -7,6 +7,9 @@ https://github.com/cdump/radiacode
 import machine
 import time
 
+from machine import Pin, SPI, UART
+from sx1278 import Lora
+
 from radiacode import RadiaCode
 from radiacode.transports.bluetooth import DeviceNotFound as DeviceNotFoundBT
 from radiacode import DoseRateDB, RareData, RawData, RealTimeData, Event
@@ -22,18 +25,74 @@ def on_wdt_reset():
 if machine.reset_cause() == machine.WDT_RESET:
     on_wdt_reset()
 
-led = machine.Pin("LED", machine.Pin.OUT)
+#led = machine.Pin("LED", machine.Pin.OUT)
 # wdt = machine.WDT(timeout=WATCHDOG_TIMEOUT)
 
-def heartbeat():
-    led.toggle()
+#def #heartbeat():
+#    led.toggle()
     # wdt.feed()  # reset watchdog timer
 
-heartbeat()  # -----------------------------------------------------------------------------------------------
+## LORA SETUP ============================
+
+SCK = 36
+MOSI = 37
+MISO = 35
+CS = 1
+# RX = IRQ
+# I don't know why the person who made the library chose this, it is a really weird name choice
+RX = 14
+RST = 5
+
+spi = SPI(1,
+    baudrate=10_000_000,
+    sck=Pin(SCK),
+    mosi=Pin(MOSI),
+    miso=Pin(MISO),
+    firstbit=SPI.MSB,
+    polarity=0,
+    phase=0
+)
+spi.init()
+
+lr = Lora(
+    spi,
+    cs=Pin(CS, Pin.OUT),
+    rx=Pin(RX, Pin.IN),
+    rs=Pin(RST, Pin.OUT),
+)
+print("LoRa init ok!")
+
+## LORA SETUP END
+
+## GNSS SETUP
+
+TX_PPS = 10  # Not used for UART, but for pulse-per-second timing (if needed)
+TX_GPS = 18  # GPS module TX -> ESP32 RX (UART RX)
+RX_GPS = 17  # GPS module RX -> ESP32 TX (UART TX)
+
+# Initialise UART
+gps_uart = UART(2, baudrate=9600, tx=Pin(TX_GPS), rx=Pin(RX_GPS))
+gps_uart.init(bits=8, parity=None, stop=1)
+
+# Reading data from GPS once if the data is in the input buffer
+def read_gps():
+    if gps_uart.any():
+        data = gps_uart.readline()
+        print("================================================================")
+        print("GPS Data:", data.decode('utf-8', errors='ignore'))
+        print("================================================================")
+    else:
+        print("================================================================")
+        print("No GPS data!!")
+        print("================================================================")
+
+## GNSS SETUP END
+
+#heartbeat()  # -----------------------------------------------------------------------------------------------
 while True:
     print(f"Connecting to Radiacode via Bluetooth (MAC address: {BLUETOOTH_MAC})")
 
-    heartbeat()  # ---------------------------------------------------------------------------------------------------------
+    #heartbeat()  # ---------------------------------------------------------------------------------------------------------
 
     # find and connect to RadiaCode
     try:
@@ -42,7 +101,7 @@ while True:
         print(e)
         continue
 
-    heartbeat()  # ---------------------------------------------------------------------------------------------------------
+    #heartbeat()  # ---------------------------------------------------------------------------------------------------------
 
     try:
         serial = rc.serial_number()
@@ -59,7 +118,8 @@ while True:
 
         start = time.ticks_ms()
         while True:
-            heartbeat()  # ----------------------------------------------------------------------------------------------------
+            read_gps()
+            #heartbeat()  # ----------------------------------------------------------------------------------------------------
 
             # infinite loop, check if there is data to process and print it
             for v in rc.data_buf():
@@ -88,7 +148,7 @@ while True:
                     #     f"Event; {v.dt}; {v.event.name}; {v.event_param1}; {v.flags};"
                     # )
             if time.ticks_ms() - start > SPECTRUM_DURATION_MS:
-                heartbeat()  # ---------------------------------------------------------------------------------------------------
+                #heartbeat()  # ---------------------------------------------------------------------------------------------------
 
                 start = time.ticks_ms()
                 # read the spectrogram
@@ -105,3 +165,4 @@ while True:
         print("ERROR: ", e)
         machine.reset()
         continue
+
